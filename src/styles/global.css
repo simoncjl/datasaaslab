@@ -44,11 +44,22 @@ body {
 
 nav {
   display: flex;
+  align-items: center;
   gap: 1rem;
 }
 
 a {
   color: var(--accent);
+}
+
+.language-switcher {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.language-switcher [aria-current='true'] {
+  font-weight: 700;
+  text-decoration: underline;
 }
 
 main {

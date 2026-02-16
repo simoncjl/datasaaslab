@@ -1,0 +1,14 @@
+---
+import { localeFromPathname, switchLocalePath } from '../lib/i18n';
+
+const pathname = Astro.url.pathname;
+const currentLocale = localeFromPathname(pathname);
+const targetLocale = currentLocale === 'fr' ? 'en' : 'fr';
+const targetPath = switchLocalePath(pathname, targetLocale);
+---
+
+<a class="language-switcher" href={targetPath} hreflang={targetLocale}>
+  <span aria-current={currentLocale === 'fr' ? 'true' : undefined}>FR</span>
+  <span aria-hidden="true">/</span>
+  <span aria-current={currentLocale === 'en' ? 'true' : undefined}>EN</span>
+</a>

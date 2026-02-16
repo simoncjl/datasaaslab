@@ -1,16 +1,18 @@
 ---
 import '../styles/global.css';
+import LanguageSwitcher from '../components/LanguageSwitcher.astro';
+import { localeFromPathname, localePath } from '../lib/i18n';
 
 interface Props {
   title: string;
-  lang?: 'en' | 'fr';
 }
 
-const { title, lang = 'en' } = Astro.props;
+const { title } = Astro.props;
+const currentLocale = localeFromPathname(Astro.url.pathname);
 ---
 
 <!doctype html>
-<html lang={lang}>
+<html lang={currentLocale}>
   <head>
     <meta charset="utf-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -22,10 +24,11 @@ const { title, lang = 'en' } = Astro.props;
   <body>
     <header class="site-header">
       <div class="container">
-        <a class="brand" href="/">DataSaaSLab</a>
+        <a class="brand" href={localePath(currentLocale, '/')}>DataSaaSLab</a>
         <nav aria-label="Primary">
-          <a href="/fr/blog">FR Blog</a>
-          <a href="/en/blog">EN Blog</a>
+          <a href={localePath(currentLocale, '/')}>Home</a>
+          <a href={localePath(currentLocale, '/blog')}>Blog</a>
+          <LanguageSwitcher />
         </nav>
       </div>
     </header>
