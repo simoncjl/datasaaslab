@@ -21,7 +21,11 @@ const posts = (await getCollection(
   ({ data }) => data.lang === lang && (includeDrafts || !data.draft),
 )).sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
 
-const pageTitle = lang === 'fr' ? 'Blog | DataSaaSLab' : 'Blog | DataSaaSLab';
+const availableTags = [...new Set(posts.flatMap((post) => post.data.tags ?? []))].sort((a, b) =>
+  a.localeCompare(b),
+);
+
+const pageTitle = 'Blog | DataSaaSLab';
 const pageDescription =
   lang === 'fr'
     ? 'Articles DataSaaSLab en francais.'
@@ -53,21 +57,142 @@ const formatDate = (value: Date) =>
   </Fragment>
 
   <section>
-    <h1>{lang === 'fr' ? 'Blog' : 'Blog'}</h1>
+    <h1>Blog</h1>
+
     {posts.length === 0 ? (
       <p>{lang === 'fr' ? 'Aucun article pour le moment.' : 'No posts yet.'}</p>
     ) : (
-      <ul>
-        {posts.map((post) => {
-          const slug = post.id.split('/').pop() ?? post.id;
-          return (
-            <li>
-              <a href={`/${lang}/blog/${slug}`}>{post.data.title}</a>
-              <small> - {formatDate(post.data.date)}</small>
-            </li>
-          );
-        })}
-      </ul>
+      <>
+        <div class="blog-filters" data-blog-filters>
+          <input
+            type="search"
+            class="blog-search"
+            data-blog-search
+            placeholder={lang === 'fr' ? 'Rechercher un article...' : 'Search posts...'}
+            aria-label={lang === 'fr' ? 'Recherche' : 'Search'}
+          />
+
+          <div class="tag-chip-row" data-tag-chips>
+            <button type="button" class="tag-chip is-active" data-tag="">
+              {lang === 'fr' ? 'Tous' : 'All'}
+            </button>
+            {availableTags.map((tag) => (
+              <button type="button" class="tag-chip" data-tag={tag}>
+                {tag}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <p class="filter-meta" data-filter-meta></p>
+
+        <ul class="blog-post-list" data-post-list>
+          {posts.map((post) => {
+            const slug = post.id.split('/').pop() ?? post.id;
+            const tags = post.data.tags ?? [];
+            return (
+              <li
+                data-post-item
+                data-title={post.data.title.toLowerCase()}
+                data-description={post.data.description.toLowerCase()}
+                data-tags={tags.join(',').toLowerCase()}
+              >
+                <a href={`/${lang}/blog/${slug}`}>{post.data.title}</a>
+                <small> - {formatDate(post.data.date)}</small>
+                {tags.length > 0 && (
+                  <div class="post-tags">
+                    {tags.map((tag) => (
+                      <span class="post-tag">{tag}</span>
+                    ))}
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </>
     )}
   </section>
 </BaseLayout>
+
+<script is:inline>
+  (() => {
+    const root = document.querySelector('[data-blog-filters]');
+    if (!root) return;
+
+    const searchInput = root.querySelector('[data-blog-search]');
+    const chips = Array.from(root.querySelectorAll('[data-tag]'));
+    const posts = Array.from(document.querySelectorAll('[data-post-item]'));
+    const meta = document.querySelector('[data-filter-meta]');
+    const allCount = posts.length;
+
+    const params = new URLSearchParams(window.location.search);
+    let activeTag = (params.get('tag') || '').trim().toLowerCase();
+    let query = (params.get('q') || '').trim().toLowerCase();
+
+    const hasTagChip = chips.some((chip) => (chip.getAttribute('data-tag') || '').toLowerCase() === activeTag);
+    if (!hasTagChip) activeTag = '';
+
+    if (searchInput) searchInput.value = query;
+
+    function setActiveChip() {
+      for (const chip of chips) {
+        const chipTag = (chip.getAttribute('data-tag') || '').toLowerCase();
+        chip.classList.toggle('is-active', chipTag === activeTag);
+      }
+    }
+
+    function updateUrl() {
+      const next = new URLSearchParams();
+      if (activeTag) next.set('tag', activeTag);
+      if (query) next.set('q', query);
+
+      const queryString = next.toString();
+      const nextUrl = queryString ? `${window.location.pathname}?${queryString}` : window.location.pathname;
+      window.history.replaceState({}, '', nextUrl);
+    }
+
+    function applyFilters() {
+      let visibleCount = 0;
+
+      for (const post of posts) {
+        const title = post.getAttribute('data-title') || '';
+        const description = post.getAttribute('data-description') || '';
+        const tagValues = (post.getAttribute('data-tags') || '')
+          .split(',')
+          .map((t) => t.trim())
+          .filter(Boolean);
+
+        const tagMatches = !activeTag || tagValues.includes(activeTag);
+        const searchMatches = !query || title.includes(query) || description.includes(query);
+        const isVisible = tagMatches && searchMatches;
+
+        post.hidden = !isVisible;
+        if (isVisible) visibleCount += 1;
+      }
+
+      if (meta) {
+        meta.textContent = `${visibleCount} / ${allCount}`;
+      }
+
+      setActiveChip();
+      updateUrl();
+    }
+
+    for (const chip of chips) {
+      chip.addEventListener('click', () => {
+        activeTag = (chip.getAttribute('data-tag') || '').toLowerCase();
+        applyFilters();
+      });
+    }
+
+    if (searchInput) {
+      searchInput.addEventListener('input', () => {
+        query = searchInput.value.trim().toLowerCase();
+        applyFilters();
+      });
+    }
+
+    applyFilters();
+  })();
+</script>
