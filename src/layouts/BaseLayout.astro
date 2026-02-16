@@ -8,7 +8,10 @@ interface Props {
 }
 
 const { title } = Astro.props;
-const currentLocale = localeFromPathname(Astro.url.pathname);
+const pathname = Astro.url.pathname;
+const currentLocale = localeFromPathname(pathname);
+const homeHref = pathname === '/' ? '/' : localePath(currentLocale, '/');
+const blogHref = localePath(currentLocale, '/blog');
 ---
 
 <!doctype html>
@@ -25,16 +28,27 @@ const currentLocale = localeFromPathname(Astro.url.pathname);
   <body>
     <header class="site-header">
       <div class="container">
-        <a class="brand" href={localePath(currentLocale, '/')}>DataSaaSLab</a>
+        <a class="brand" href={homeHref}>DataSaaSLab</a>
         <nav aria-label="Primary">
-          <a href={localePath(currentLocale, '/')}>Home</a>
-          <a href={localePath(currentLocale, '/blog')}>Blog</a>
+          <a href={homeHref}>Home</a>
+          <a href={blogHref}>Blog</a>
           <LanguageSwitcher />
         </nav>
       </div>
     </header>
+
     <main class="container">
       <slot />
     </main>
+
+    <footer class="site-footer">
+      <div class="container footer-content">
+        <a href="https://github.com/Simoncjl" target="_blank" rel="noopener noreferrer">GitHub: Simoncjl</a>
+        <a href="https://datasaaslab-blog.pages.dev" target="_blank" rel="noopener noreferrer">
+          datasaaslab-blog.pages.dev
+        </a>
+        <p>Opinions are my own.</p>
+      </div>
+    </footer>
   </body>
 </html>

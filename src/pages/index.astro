@@ -1,0 +1,66 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const includeDrafts = import.meta.env.DEV;
+const latestPosts = (await getCollection('blog', ({ data }) => includeDrafts || !data.draft))
+  .sort((a, b) => b.data.date.getTime() - a.data.date.getTime())
+  .slice(0, 6);
+
+const formatDate = (date: Date, lang: 'fr' | 'en') =>
+  new Intl.DateTimeFormat(lang === 'fr' ? 'fr-FR' : 'en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  }).format(date);
+---
+
+<BaseLayout title="DataSaaSLab">
+  <section class="hero">
+    <h1>DataSaaSLab</h1>
+    <p class="hero-subtitle">Data Engineering • SaaS Builder • Applied AI</p>
+    <div class="cta-row">
+      <a class="button" href="/fr/blog">Lire en Francais</a>
+      <a class="button button-secondary" href="/en/blog">Read in English</a>
+    </div>
+  </section>
+
+  <section>
+    <h2>Pillars</h2>
+    <div class="pillar-grid">
+      <a class="card" href="/fr/blog?tag=data">
+        <h3>Data Engineering</h3>
+        <p>Plateformes data, architecture medallion, gouvernance et fiabilite.</p>
+      </a>
+      <a class="card" href="/fr/blog?tag=saas">
+        <h3>SaaS Builder</h3>
+        <p>Produit, decisions d'architecture et execution pragmatique.</p>
+      </a>
+      <a class="card" href="/fr/blog?tag=ai">
+        <h3>Applied AI</h3>
+        <p>Automatisation, agents et workflows AI appliques aux operations.</p>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <h2>Latest posts</h2>
+    {latestPosts.length === 0 ? (
+      <p>No posts yet.</p>
+    ) : (
+      <ul class="latest-list">
+        {latestPosts.map((post) => {
+          const slug = post.id.split('/').pop() ?? post.id;
+          const href = `/${post.data.lang}/blog/${slug}`;
+          return (
+            <li>
+              <a href={href}>{post.data.title}</a>
+              <span class="lang-badge">{post.data.lang.toUpperCase()}</span>
+              <small>{formatDate(post.data.date, post.data.lang)}</small>
+            </li>
+          );
+        })}
+      </ul>
+    )}
+  </section>
+</BaseLayout>
