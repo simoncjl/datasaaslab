@@ -1,0 +1,88 @@
+---
+title: "ANSI Mode en Spark SQL : pourquoi ansi_mode=false peut masquer des erreurs critiques sur Databricks"
+description: "Analyse technique du comportement de spark.sql.ansi.enabled dans Spark et Databricks, avec exemples concrets sur conflits de types et fichiers Parquet legacy."
+date: 2026-02-17
+tags: ["spark","databricks","sql","data-engineering","governance"]
+lang: "fr"
+kind: "post"
+ai_assisted: false
+draft: false
+---
+
+## Introduction
+
+Le paramètre qui change le plus le niveau de fiabilité d'un pipeline Spark SQL est souvent `spark.sql.ansi.enabled`.
+
+➡️ Lab: [Reproduce the issue on Parquet legacy schema drift](/labs/ansi-parquet-legacy-drift)
+
+Sur Databricks Runtime, ce flag est le réglage canonique pour activer ou non le comportement ANSI dans Spark SQL. Le risque avec `ansi_mode=false` (ou plus précisément `spark.sql.ansi.enabled=false`) est simple: des erreurs de type deviennent silencieuses.
+
+## Définitions: mode ANSI strict vs mode permissif
+
+- `spark.sql.ansi.enabled = true`:
+  - comportement strict ANSI SQL
+  - cast invalide => erreur
+  - overflow numérique => erreur
+- `spark.sql.ansi.enabled = false`:
+  - comportement permissif/legacy
+  - cast invalide => `NULL`
+  - overflow => peut ne pas lever d'erreur explicite
+
+Attention: ne pas confondre ce paramètre Spark avec `ANSI_MODE` côté Databricks SQL Warehouse. Le nom est proche, le contexte d'exécution ne l'est pas.
+
+## Exemple minimal: cast invalide
+
+```sql
+SET spark.sql.ansi.enabled = true;
+SELECT CAST('abc' AS INT) AS value;
+-- Runtime error: invalid cast
+```
+
+```sql
+SET spark.sql.ansi.enabled = false;
+SELECT CAST('abc' AS INT) AS value;
+-- value = NULL
+```
+
+## Cas réel: Parquet legacy, drift de schéma, clusters différents
+
+Contexte fréquent:
+
+- anciennes partitions Parquet avec colonne `amount` en `STRING`
+- nouvelles écritures avec `amount` en `DECIMAL` ou `DOUBLE`
+- même requête SQL exécutée sur des clusters/configs différents
+
+```sql
+-- Lecture bronze legacy
+CREATE OR REPLACE TEMP VIEW bronze_orders AS
+SELECT *
+FROM parquet.`dbfs:/mnt/lake/orders_legacy`;
+
+-- Normalisation
+SELECT
+  order_id,
+  CAST(amount AS DECIMAL(18,2)) AS amount_num
+FROM bronze_orders;
+```
+
+Avec `spark.sql.ansi.enabled=false`, les valeurs non convertibles (`'N/A'`, `'UNKNOWN'`, chaînes corrompues) deviennent `NULL`. Le job peut "passer" alors que la qualité des données se dégrade.
+
+Avec `spark.sql.ansi.enabled=true`, la même transformation lève une erreur immédiatement. Le drift devient visible, traçable, et corrigeable plus tôt.
+
+## Valeur par défaut sur Databricks Runtime récent
+
+Point important de gouvernance: Spark 4.0 active ANSI par défaut, et Databricks Runtime 17.x suit ce comportement (ANSI activé par défaut). Un upgrade de runtime peut donc changer la sémantique de jobs existants si vos casts legacy étaient implicites.
+
+## Recommandations pratiques
+
+- Standardiser `spark.sql.ansi.enabled=true` sur les pipelines de prod.
+- Utiliser `try_cast(...)` seulement quand le `NULL` est un comportement métier explicitement accepté.
+- Ajouter des contrôles qualité: taux de `NULL`, compte de lignes non convertibles, seuils d'alerte.
+- Valider la compatibilité de schéma Parquet en amont (bronze) au lieu de corriger en aval.
+- Documenter la politique ANSI par environnement (jobs Spark, notebooks, SQL Warehouse).
+
+## Conclusion
+
+`ansi_mode=false` peut donner une impression de robustesse alors qu'il masque des erreurs critiques de typage. Pour des plateformes data gouvernées, mieux vaut échouer tôt et explicitement que propager des `NULL` silencieux.
+
+➡️ Lab: [Reproduce the issue on Parquet legacy schema drift](/labs/ansi-parquet-legacy-drift)
