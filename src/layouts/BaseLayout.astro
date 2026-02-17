@@ -5,23 +5,44 @@ import { localeFromPathname, localePath } from '../lib/i18n';
 
 interface Props {
   title: string;
+  description?: string;
+  ogImage?: string;
 }
 
-const { title } = Astro.props;
+const {
+  title,
+  description = 'DataSaaSLab: Data Engineering, SaaS building, and applied AI notes.',
+  ogImage = '/og.png',
+} = Astro.props;
 const pathname = Astro.url.pathname;
 const currentLocale = localeFromPathname(pathname);
 const homeHref = pathname === '/' ? '/' : localePath(currentLocale, '/');
 const blogHref = localePath(currentLocale, '/blog');
+const siteUrl = 'https://datasaaslab-blog.pages.dev';
+const canonicalUrl = new URL(pathname, siteUrl).toString();
+const ogImageUrl = new URL(ogImage, siteUrl).toString();
 ---
 
 <!doctype html>
 <html lang={currentLocale}>
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="description" content={description} />
+    <meta property="og:site_name" content="DataSaaSLab" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageUrl} />
     <title>{title}</title>
     <slot name="head" />
   </head>

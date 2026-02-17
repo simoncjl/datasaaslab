@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://datasaaslab-blog.pages.dev/sitemap.xml
