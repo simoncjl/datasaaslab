@@ -1,0 +1,63 @@
+---
+title: "Éviter la saisie répétée de la passphrase SSH avec ssh-agent"
+description: "Configurer ssh-agent pour GitHub afin de ne pas retaper la passphrase à chaque git push, avec persistance macOS et usage Linux."
+date: 2026-02-17
+tags: ["git","ssh","security","devops"]
+lang: "fr"
+draft: false
+---
+
+## Objectif
+
+Si votre clé privée SSH est protégée par une passphrase, `ssh-agent` permet de la déverrouiller une fois par session au lieu de la saisir à chaque `git push`.
+
+Pré-requis opérationnel: la clé publique correspondante doit être ajoutée à votre compte GitHub.
+
+## Démarrage rapide
+
+```bash
+eval "$(ssh-agent)"
+ssh-add ~/.ssh/id_rsa
+ssh-add -l
+```
+
+- `eval "$(ssh-agent)"` démarre l’agent dans la session courante.
+- `ssh-add ~/.ssh/id_rsa` charge la clé privée dans l’agent.
+- `ssh-add -l` vérifie les clés actuellement chargées.
+
+## Persistance selon l’OS
+
+### macOS (Keychain)
+
+```bash
+ssh-add --apple-use-keychain ~/.ssh/id_rsa
+ssh-add -l
+```
+
+Cette option stocke la passphrase dans le trousseau macOS pour éviter de la ressaisir à chaque nouvelle session.
+
+### Linux (session)
+
+```bash
+eval "$(ssh-agent)"
+ssh-add ~/.ssh/id_rsa
+ssh-add -l
+```
+
+Sous Linux, c’est généralement lié à la session utilisateur: relancer l’agent après redémarrage/fermeture de session.
+
+## Pièges courants
+
+- Démarrer `ssh-agent` dans un shell, puis exécuter `git push` dans un autre shell non lié à cet agent.
+- Charger la mauvaise clé (`id_rsa` vs autre nom de fichier).
+- Oublier d’ajouter la clé publique sur GitHub.
+- Avoir des permissions trop ouvertes sur `~/.ssh` ou la clé privée.
+- Mélanger plusieurs clés sans vérifier l’ordre/priorité côté client SSH.
+
+## Bonnes pratiques
+
+- Pour une nouvelle clé, préférer `ed25519` plutôt que `rsa`.
+- Garder une passphrase forte sur la clé privée.
+- Vérifier régulièrement les clés actives avec `ssh-add -l`.
+- Limiter le nombre de clés chargées dans l’agent.
+- Séparer les clés par contexte (pro/perso) avec une configuration SSH explicite.

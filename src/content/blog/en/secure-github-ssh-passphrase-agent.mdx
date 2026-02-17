@@ -1,0 +1,63 @@
+---
+title: "Stop Re-Typing SSH Passphrases for GitHub with ssh-agent"
+description: "Use ssh-agent so GitHub pushes do not prompt for your SSH passphrase every time, with macOS keychain and Linux session usage."
+date: 2026-02-17
+tags: ["git","ssh","security","devops"]
+lang: "en"
+draft: false
+---
+
+## Goal
+
+If your SSH private key is protected by a passphrase, `ssh-agent` lets you unlock it once per session instead of typing it on every `git push`.
+
+Operational prerequisite: the matching public key must be added to your GitHub account.
+
+## Quick Setup
+
+```bash
+eval "$(ssh-agent)"
+ssh-add ~/.ssh/id_rsa
+ssh-add -l
+```
+
+- `eval "$(ssh-agent)"` starts the agent in the current shell session.
+- `ssh-add ~/.ssh/id_rsa` loads the private key into the agent.
+- `ssh-add -l` verifies which keys are currently loaded.
+
+## OS-Specific Persistence
+
+### macOS (Keychain)
+
+```bash
+ssh-add --apple-use-keychain ~/.ssh/id_rsa
+ssh-add -l
+```
+
+This stores the passphrase in the macOS keychain so new terminal sessions do not keep prompting.
+
+### Linux (session)
+
+```bash
+eval "$(ssh-agent)"
+ssh-add ~/.ssh/id_rsa
+ssh-add -l
+```
+
+On Linux, this is usually session-scoped: restart or logout typically requires loading the key again.
+
+## Common Pitfalls
+
+- Starting `ssh-agent` in one shell, then running `git push` from another shell not attached to that agent.
+- Adding the wrong key file (`id_rsa` vs a custom key path).
+- Forgetting to add the public key to GitHub.
+- Leaving `~/.ssh` or private key permissions too open.
+- Loading multiple keys without controlling client-side SSH selection order.
+
+## Best Practices
+
+- For new keys, prefer `ed25519` over `rsa`.
+- Keep a strong passphrase on private keys.
+- Check active keys regularly with `ssh-add -l`.
+- Keep only needed keys loaded in the agent.
+- Separate work/personal identities with explicit SSH config.
