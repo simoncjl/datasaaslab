@@ -1,7 +1,7 @@
 ---
 import '../styles/global.css';
 import LanguageSwitcher from '../components/LanguageSwitcher.astro';
-import { localeFromPathname, localePath } from '../lib/i18n';
+import { localePath, preferredLocaleFromAcceptLanguage, type Locale } from '../lib/i18n';
 
 interface Props {
   title: string;
@@ -15,18 +15,25 @@ const {
   ogImage = '/og.png',
 } = Astro.props;
 const pathname = Astro.url.pathname;
-const currentLocale = localeFromPathname(pathname);
-const isLocalizedPath =
-  pathname === '/fr' ||
-  pathname.startsWith('/fr/') ||
-  pathname === '/en' ||
-  pathname.startsWith('/en/');
 
-const homeHref = isLocalizedPath ? localePath(currentLocale, '/') : '/';
-const blogHref = isLocalizedPath ? localePath(currentLocale, '/blog') : '/blog';
-const tipsHref = isLocalizedPath ? localePath(currentLocale, '/tips') : '/tips';
+const pathLocaleMatch = pathname.match(/^\/(fr|en)(\/|$)/);
+const localeFromPath = pathLocaleMatch?.[1] as Locale | undefined;
+const localeFromHeader = preferredLocaleFromAcceptLanguage(Astro.request.headers.get('accept-language'));
+const currentLocale = localeFromPath ?? localeFromHeader ?? 'fr';
+const isLocalizedPath = Boolean(localeFromPath);
+
+const homeHref = localePath(currentLocale, '/');
+const blogHref = localePath(currentLocale, '/blog');
+const tipsHref = localePath(currentLocale, '/tips');
+
+const navLabels =
+  currentLocale === 'fr'
+    ? { home: 'Accueil', blog: 'Blog', tips: 'Astuces' }
+    : { home: 'Home', blog: 'Blog', tips: 'Tips' };
+
+const canonicalPath = isLocalizedPath ? pathname : localePath(currentLocale, pathname);
 const siteUrl = 'https://datasaaslab.dev';
-const canonicalUrl = new URL(pathname, siteUrl).toString();
+const canonicalUrl = new URL(canonicalPath, siteUrl).toString();
 const ogImageUrl = new URL(ogImage, siteUrl).toString();
 ---
 
@@ -58,9 +65,9 @@ const ogImageUrl = new URL(ogImage, siteUrl).toString();
       <div class="container">
         <a class="brand" href={homeHref}>DataSaaSLab</a>
         <nav aria-label="Primary">
-          <a href={homeHref}>Home</a>
-          <a href={blogHref}>Blog</a>
-          <a href={tipsHref}>Tips</a>
+          <a href={homeHref}>{navLabels.home}</a>
+          <a href={blogHref}>{navLabels.blog}</a>
+          <a href={tipsHref}>{navLabels.tips}</a>
           <LanguageSwitcher />
         </nav>
       </div>
