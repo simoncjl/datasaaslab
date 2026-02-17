@@ -7,9 +7,9 @@ export const FALLBACK_BY_LOCALE: Record<Locale, string> = {
   en: '/en',
 };
 
-export const SECTION_FALLBACK_BY_LOCALE: Record<Locale, { blog: string; tips: string }> = {
-  fr: { blog: '/fr/blog', tips: '/fr/tips' },
-  en: { blog: '/en/blog', tips: '/en/tips' },
+export const SECTION_FALLBACK_BY_LOCALE: Record<Locale, { home: string; blog: string; tips: string; labs: string }> = {
+  fr: { home: '/fr', blog: '/fr/blog', tips: '/fr/tips', labs: '/fr/labs' },
+  en: { home: '/en', blog: '/en/blog', tips: '/en/tips', labs: '/en/labs' },
 };
 
 const EQUIVALENT_PATHS = new Set<string>([
@@ -25,6 +25,10 @@ const EQUIVALENT_PATHS = new Set<string>([
   '/fr/tips/',
   '/en/tips',
   '/en/tips/',
+  '/fr/labs',
+  '/fr/labs/',
+  '/en/labs',
+  '/en/labs/',
 ]);
 
 export function normalizePathname(pathname: string): string {

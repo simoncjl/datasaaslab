@@ -1,0 +1,80 @@
+---
+import { getCollection, render, type CollectionEntry } from 'astro:content';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { LOCALES, type Locale } from '../../../lib/i18n';
+import { buildAbsoluteUrl } from '../../../lib/seo';
+
+const langParam = Astro.params.lang;
+const slug = Astro.params.slug;
+
+if (!langParam || !LOCALES.includes(langParam as Locale) || !slug) {
+  return Astro.redirect('/fr/labs', 302);
+}
+
+const lang = langParam as Locale;
+const includeDrafts = import.meta.env.DEV;
+
+const labs = await getCollection('labs', ({ data }) => includeDrafts || !data.draft);
+const lab = labs.find((entry) => (entry.id.split('/').pop() ?? entry.id) === slug) as CollectionEntry<'labs'> | undefined;
+
+if (!lab) {
+  Astro.response.status = 404;
+}
+
+const pageTitle = lab ? `${lab.data.title} | DataSaaSLab` : '404 | DataSaaSLab';
+const pageDescription = lab?.data.description ?? 'Lab not found.';
+const canonicalPath = `/${lang}/labs/${slug}`;
+const canonicalUrl = buildAbsoluteUrl(canonicalPath);
+const frAltUrl = buildAbsoluteUrl(`/fr/labs/${slug}`);
+const enAltUrl = buildAbsoluteUrl(`/en/labs/${slug}`);
+
+const rendered = lab ? await render(lab) : null;
+const Content = rendered?.Content;
+
+const formatDate = (value: Date) =>
+  new Intl.DateTimeFormat(lang === 'fr' ? 'fr-FR' : 'en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  }).format(value);
+---
+
+<BaseLayout title={pageTitle} description={pageDescription}>
+  <Fragment slot="head">
+    {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+    {frAltUrl && <link rel="alternate" hreflang="fr" href={frAltUrl} />}
+    {enAltUrl && <link rel="alternate" hreflang="en" href={enAltUrl} />}
+    <meta name="description" content={pageDescription} />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={pageDescription} />
+    {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
+  </Fragment>
+
+  {lab && Content ? (
+    <article class="prose">
+      <h1>{lab.data.title}</h1>
+      <p>{lab.data.description}</p>
+
+      <div class="post-tags">
+        <span class="post-tag">{formatDate(lab.data.date)}</span>
+        <span class="post-tag">{lab.data.difficulty}</span>
+        <span class="post-tag">{lab.data.runtime}</span>
+      </div>
+
+      <h2>{lang === 'fr' ? 'Prérequis' : 'Prerequisites'}</h2>
+      <ul>
+        {lab.data.prerequisites.map((item) => (
+          <li>{item}</li>
+        ))}
+      </ul>
+
+      <Content />
+    </article>
+  ) : (
+    <section>
+      <h1>404</h1>
+      <p>{lang === 'fr' ? 'Lab introuvable.' : 'Lab not found.'}</p>
+    </section>
+  )}
+</BaseLayout>

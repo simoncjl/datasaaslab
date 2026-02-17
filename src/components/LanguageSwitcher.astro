@@ -1,70 +1,74 @@
 ---
-import { getCollection } from "astro:content";
+import { getCollection } from 'astro:content';
 import {
   SECTION_FALLBACK_BY_LOCALE,
   localeFromPathname,
   normalizePathname,
   switchLocalePath,
-} from "../lib/i18n";
+} from '../lib/i18n';
 
 const pathname = Astro.url.pathname;
 const search = Astro.url.search;
 const normalizedPath = normalizePathname(pathname);
-
-const detectedLocale = localeFromPathname(pathname);
-// si tu es sur /tips ou /blog (non préfixé), detectedLocale peut être null/undefined selon ton implémentation
-const currentLocale = detectedLocale ?? "fr";
-const targetLocale = currentLocale === "fr" ? "en" : "fr";
+const currentLocale = localeFromPathname(pathname);
+const targetLocale = currentLocale === 'fr' ? 'en' : 'fr';
 
 // base: swap prefix (si possible)
 let targetPath = `${switchLocalePath(normalizedPath, targetLocale)}${search}`;
 
-// Match detail pages (blog + tips)
+// Match detail pages (blog + labs)
 const blogDetail = normalizedPath.match(/^\/(fr|en)\/blog\/([^/]+)\/?$/);
-const tipsDetail = normalizedPath.match(/^\/(fr|en)\/tips\/([^/]+)\/?$/);
+const labsDetail = normalizedPath.match(/^\/(fr|en)\/labs\/([^/]+)\/?$/);
 
 // Helper: find entry by slug in a locale
-async function findEntryBySlug(lang: "fr" | "en", slug: string) {
+async function findBlogEntryBySlug(lang: 'fr' | 'en', slug: string) {
   const includeDrafts = import.meta.env.DEV;
-  const entries = await getCollection("blog", ({ data }) => data.lang === lang && (includeDrafts || !data.draft));
-  return entries.find((e) => e.slug === slug);
+  const entries = await getCollection('blog', ({ data }) => data.lang === lang && (includeDrafts || !data.draft));
+  return entries.find((entry) => (entry.id.split('/').pop() ?? entry.id) === slug);
+}
+
+async function hasLabSlug(slug: string) {
+  const includeDrafts = import.meta.env.DEV;
+  const labs = await getCollection('labs', ({ data }) => includeDrafts || !data.draft);
+  return labs.some((lab) => (lab.id.split('/').pop() ?? lab.id) === slug);
 }
 
 // BLOG detail: keep same slug if translation exists, else fallback based on kind
 if (blogDetail) {
   const slug = blogDetail[2];
 
-  const targetEntry = await findEntryBySlug(targetLocale as "fr" | "en", slug);
-  const currentEntry = await findEntryBySlug(currentLocale as "fr" | "en", slug);
+  const targetEntry = await findBlogEntryBySlug(targetLocale as 'fr' | 'en', slug);
+  const currentEntry = await findBlogEntryBySlug(currentLocale as 'fr' | 'en', slug);
 
   if (targetEntry) {
     targetPath = `/${targetLocale}/blog/${slug}${search}`;
-  } else if (currentEntry?.data.kind === "tip") {
+  } else if (currentEntry?.data.kind === 'tip') {
     targetPath = `${SECTION_FALLBACK_BY_LOCALE[targetLocale].tips}${search}`;
   } else {
     targetPath = `${SECTION_FALLBACK_BY_LOCALE[targetLocale].blog}${search}`;
   }
 }
 
-// TIPS detail: keep same slug if translation exists, else fallback to tips list
-if (tipsDetail) {
-  const slug = tipsDetail[2];
-  const targetEntry = await findEntryBySlug(targetLocale as "fr" | "en", slug);
+// LABS detail: keep same slug if lab exists, else fallback to labs list
+if (labsDetail) {
+  const slug = labsDetail[2];
+  const exists = await hasLabSlug(slug);
 
-  if (targetEntry) {
-    targetPath = `/${targetLocale}/tips/${slug}${search}`;
+  if (exists) {
+    targetPath = `/${targetLocale}/labs/${slug}${search}`;
   } else {
-    targetPath = `${SECTION_FALLBACK_BY_LOCALE[targetLocale].tips}${search}`;
+    targetPath = `${SECTION_FALLBACK_BY_LOCALE[targetLocale].labs}${search}`;
   }
 }
 
 // Non-prefixed routes safety: force to prefixed sections
-// (utile tant que /tips, /blog, / existent encore)
-if (!normalizedPath.startsWith("/fr/") && !normalizedPath.startsWith("/en/")) {
-  if (normalizedPath === "/tips" || normalizedPath.startsWith("/tips/")) {
+if (!normalizedPath.startsWith('/fr/') && !normalizedPath.startsWith('/en/')) {
+  if (normalizedPath === '/tips' || normalizedPath.startsWith('/tips/')) {
     targetPath = `${SECTION_FALLBACK_BY_LOCALE[targetLocale].tips}${search}`;
-  } else if (normalizedPath === "/blog" || normalizedPath.startsWith("/blog/")) {
+  } else if (normalizedPath === '/blog' || normalizedPath.startsWith('/blog/')) {
     targetPath = `${SECTION_FALLBACK_BY_LOCALE[targetLocale].blog}${search}`;
+  } else if (normalizedPath === '/labs' || normalizedPath.startsWith('/labs/')) {
+    targetPath = `${SECTION_FALLBACK_BY_LOCALE[targetLocale].labs}${search}`;
   } else {
     targetPath = `${SECTION_FALLBACK_BY_LOCALE[targetLocale].home}${search}`;
   }
@@ -72,7 +76,7 @@ if (!normalizedPath.startsWith("/fr/") && !normalizedPath.startsWith("/en/")) {
 ---
 
 <a class="language-switcher" href={targetPath} hreflang={targetLocale}>
-  <span aria-current={currentLocale === "fr" ? "true" : undefined}>FR</span>
+  <span aria-current={currentLocale === 'fr' ? 'true' : undefined}>FR</span>
   <span aria-hidden="true">/</span>
-  <span aria-current={currentLocale === "en" ? "true" : undefined}>EN</span>
+  <span aria-current={currentLocale === 'en' ? 'true' : undefined}>EN</span>
 </a>

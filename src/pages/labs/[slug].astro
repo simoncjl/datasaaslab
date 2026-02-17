@@ -1,0 +1,12 @@
+---
+import { preferredLocaleFromAcceptLanguage } from '../../lib/i18n';
+
+const preferredLocale = preferredLocaleFromAcceptLanguage(Astro.request.headers.get('accept-language'));
+const slug = Astro.params.slug;
+
+if (!slug) {
+  return Astro.redirect(`/${preferredLocale}/labs`, 302);
+}
+
+return Astro.redirect(`/${preferredLocale}/labs/${slug}`, 302);
+---

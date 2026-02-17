@@ -2,6 +2,7 @@ import { defineCollection, z } from 'astro:content';
 import { glob } from 'astro/loaders';
 
 const blogBasePath = new URL('./blog', import.meta.url);
+const labsBasePath = new URL('./labs', import.meta.url);
 
 const blog = defineCollection({
   loader: {
@@ -40,4 +41,21 @@ const blog = defineCollection({
   }),
 });
 
-export const collections = { blog };
+const labs = defineCollection({
+  loader: glob({
+    base: labsBasePath,
+    pattern: '**/*.{md,mdx}',
+  }),
+  schema: z.object({
+    title: z.string(),
+    description: z.string(),
+    date: z.date(),
+    tags: z.array(z.string()),
+    difficulty: z.string(),
+    prerequisites: z.array(z.string()),
+    runtime: z.string(),
+    draft: z.boolean().default(false),
+  }),
+});
+
+export const collections = { blog, labs };

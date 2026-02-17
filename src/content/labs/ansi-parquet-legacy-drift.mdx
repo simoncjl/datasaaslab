@@ -1,0 +1,53 @@
+---
+title: "Lab: ANSI mode and legacy Parquet schema drift"
+description: "Hands-on lab to reproduce how spark.sql.ansi.enabled changes failure behavior with legacy Parquet type drift."
+date: 2026-02-17
+tags: ["spark","databricks","sql","governance"]
+difficulty: "intermediate"
+prerequisites: ["Basic Spark SQL", "Access to Databricks workspace", "Sample Parquet dataset"]
+runtime: "Databricks"
+draft: false
+---
+
+## Goal
+
+Reproduce the impact of `spark.sql.ansi.enabled` on type conversion failures when legacy Parquet partitions contain schema drift.
+
+## Setup
+
+```sql
+SET spark.sql.ansi.enabled = false;
+
+CREATE OR REPLACE TEMP VIEW bronze_orders AS
+SELECT *
+FROM parquet.`dbfs:/mnt/lake/orders_legacy`;
+```
+
+## Step 1: Permissive mode
+
+```sql
+SELECT
+  order_id,
+  CAST(amount AS DECIMAL(18,2)) AS amount_num
+FROM bronze_orders;
+```
+
+Observe non-convertible values becoming `NULL`.
+
+## Step 2: Strict ANSI mode
+
+```sql
+SET spark.sql.ansi.enabled = true;
+
+SELECT
+  order_id,
+  CAST(amount AS DECIMAL(18,2)) AS amount_num
+FROM bronze_orders;
+```
+
+Observe explicit cast failures.
+
+## Validation
+
+- Confirm mismatch in row quality between permissive and strict execution.
+- Count invalid rows and define a threshold for pipeline blocking.

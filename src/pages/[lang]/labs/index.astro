@@ -1,0 +1,78 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { LOCALES, type Locale } from '../../../lib/i18n';
+import { buildAbsoluteUrl } from '../../../lib/seo';
+
+const langParam = Astro.params.lang;
+if (!langParam || !LOCALES.includes(langParam as Locale)) {
+  return Astro.redirect('/fr/labs', 302);
+}
+
+const lang = langParam as Locale;
+const includeDrafts = import.meta.env.DEV;
+
+const labs = (await getCollection('labs', ({ data }) => includeDrafts || !data.draft)).sort(
+  (a, b) => b.data.date.getTime() - a.data.date.getTime(),
+);
+
+const pageTitle = 'Labs | DataSaaSLab';
+const pageDescription =
+  lang === 'fr' ? 'Labs pratiques DataSaaSLab pour reproduire des scénarios techniques.' : 'Hands-on DataSaaSLab labs to reproduce technical scenarios.';
+
+const canonicalPath = `/${lang}/labs`;
+const canonicalUrl = buildAbsoluteUrl(canonicalPath);
+const frAltUrl = buildAbsoluteUrl('/fr/labs');
+const enAltUrl = buildAbsoluteUrl('/en/labs');
+
+const formatDate = (value: Date) =>
+  new Intl.DateTimeFormat(lang === 'fr' ? 'fr-FR' : 'en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  }).format(value);
+---
+
+<BaseLayout title={pageTitle} description={pageDescription}>
+  <Fragment slot="head">
+    {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+    {frAltUrl && <link rel="alternate" hreflang="fr" href={frAltUrl} />}
+    {enAltUrl && <link rel="alternate" hreflang="en" href={enAltUrl} />}
+    <meta name="description" content={pageDescription} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={pageDescription} />
+    {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
+  </Fragment>
+
+  <section>
+    <h1>Labs</h1>
+    <p>
+      {lang === 'fr'
+        ? 'Exercices guidés pour reproduire des problèmes data engineering et valider des stratégies de remédiation.'
+        : 'Guided exercises to reproduce data engineering problems and validate remediation strategies.'}
+    </p>
+
+    {labs.length === 0 ? (
+      <p>{lang === 'fr' ? 'Aucun lab disponible.' : 'No labs available yet.'}</p>
+    ) : (
+      <ul class="blog-post-list">
+        {labs.map((lab) => {
+          const slug = lab.id.split('/').pop() ?? lab.id;
+          return (
+            <li>
+              <a href={`/${lang}/labs/${slug}`}>{lab.data.title}</a>
+              <small>{` - ${formatDate(lab.data.date)} • ${lab.data.difficulty} • ${lab.data.runtime}`}</small>
+              <p>{lab.data.description}</p>
+              <div class="post-tags">
+                {lab.data.tags.map((tag) => (
+                  <span class="post-tag">{tag}</span>
+                ))}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    )}
+  </section>
+</BaseLayout>

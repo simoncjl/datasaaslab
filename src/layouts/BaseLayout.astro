@@ -25,11 +25,12 @@ const isLocalizedPath = Boolean(localeFromPath);
 const homeHref = localePath(currentLocale, '/');
 const blogHref = localePath(currentLocale, '/blog');
 const tipsHref = localePath(currentLocale, '/tips');
+const labsHref = localePath(currentLocale, '/labs');
 
 const navLabels =
   currentLocale === 'fr'
-    ? { home: 'Accueil', blog: 'Blog', tips: 'Astuces' }
-    : { home: 'Home', blog: 'Blog', tips: 'Tips' };
+    ? { home: 'Accueil', blog: 'Blog', tips: 'Astuces', labs: 'Labs' }
+    : { home: 'Home', blog: 'Blog', tips: 'Tips', labs: 'Labs' };
 
 const canonicalPath = isLocalizedPath ? pathname : localePath(currentLocale, pathname);
 const siteUrl = 'https://datasaaslab.dev';
@@ -68,6 +69,7 @@ const ogImageUrl = new URL(ogImage, siteUrl).toString();
           <a href={homeHref}>{navLabels.home}</a>
           <a href={blogHref}>{navLabels.blog}</a>
           <a href={tipsHref}>{navLabels.tips}</a>
+          <a href={labsHref}>{navLabels.labs}</a>
           <LanguageSwitcher />
         </nav>
       </div>
